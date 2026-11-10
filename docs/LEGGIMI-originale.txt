@@ -1,0 +1,77 @@
+SCUOLA FASSICOMO - ESCAPE ROOM 2.0.3
+
+PACCHETTO COMPLETO, CLASSIFICA INIZIALE VUOTA
+Estrarre tutto lo ZIP in una nuova cartella e aprire escape_room.html.
+Non aprire direttamente dentro lo ZIP.
+
+MAPPA FILE
+Escape_Room_Fassicomo_2_0_3/
+  escape_room.html
+  classifica.js
+  scuola.js
+  classifica.json
+  assets/logo-fassicomo.jpg
+  LEGGIMI.txt
+  TEST.txt
+
+MODIFICA GRAFICA
+SCUOLA FASSICOMO in verticale a 32 pixel (prima 16), spaziatura 35 pixel.
+Velocità base 50 pixel/secondo (prima circa 35): aumento di circa il 43%.
+Colonne vicine ai bordi: due su schermo ampio, una su schermo stretto.
+I caratteri Matrix normali mantengono le dimensioni precedenti.
+Il nome della scuola usa un canvas trasparente separato e lo script scuola.js.
+Logo originale incluso nell'intestazione e nel badge finale.
+
+ADMIN
+Pulsante Admin sotto i podi. Password esatta: Password.0
+La finestra contiene i cinque comandi: Collega file esistente; Crea file
+classifica; Riattiva / Salva; Importa copia (manuale); Scarica backup.
+Ogni chiusura tramite pulsante, Escape o sfondo blocca l'accesso nuovamente.
+Il salvataggio automatico continua anche con Admin chiuso.
+Password statica nel codice: barriera contro clic accidentali, non sicurezza.
+
+CLASSIFICA
+Top 3 rapida e Top 3 completa, visibili all'inizio e dopo vittoria/sconfitta.
+Si registrano solo vittorie nei primi tre. Nessuno storico e nessun punteggio.
+Tempo reale di completamento, senza sommare le penalità. A parità esatta resta
+prima il risultato precedente. Visualizzazione minuti:secondi.centesimi.
+
+PRIMO COLLEGAMENTO
+Admin -> Password.0 -> Collega file esistente -> classifica.json incluso.
+Autorizzare lettura e scrittura e verificare Salvataggio automatico attivo.
+Il pacchetto include un JSON vuoto; non sono stati recuperati vecchi risultati.
+Il riferimento al file usa un nuovo archivio browser, quindi collegare il file
+al primo utilizzo di questa versione.
+Ogni nuovo record aggiorna il file collegato. Aspettare Classifica salvata
+prima di chiudere: non serve un ulteriore salvataggio manuale serale.
+Alla riapertura si tenta il recupero del riferimento in IndexedDB. Se il
+permesso è ancora valido, lettura automatica; altrimenti Admin -> Riattiva /
+Salva o nuova selezione del file. Il permesso può essere richiesto di nuovo.
+
+COMPATIBILITÀ E RECUPERO
+Provare Chrome/Edge desktop. Il salvataggio diretto da HTML aperto con doppio
+clic dipende dal browser e dai permessi: il gioco verifica le API disponibili.
+Se non disponibile, usare da Admin importazione e backup manuali.
+Importare non autorizza la scrittura sul file: occorre collegarlo o crearne uno.
+Scarica backup produce una copia; non sovrascrive automaticamente il file
+collegato e non azzera l'avviso di record non salvati nel file principale.
+In errore i record restano in memoria: riprovare da Admin o esportare prima
+di chiudere. Nessun messaggio di successo se la scrittura non riesce.
+Usare una sola scheda/postazione per file. Il controllo delle modifiche esterne
+non rende il programma un database multiutente. La scrittura locale non
+conferma che Dropbox abbia completato la sincronizzazione.
+Non usare navigazione privata per ricordare il collegamento al file.
+
+FUNZIONI PRECEDENTI
+Musica e suoni separati, volume musica, timer, penalità, contatore errori,
+chiave III con Hint al livello 1 e 28 righe da ispezionare al livello 2.
+Musica sintetizzata ispirata alle bozze, non identica ai WAV; sfumature tra
+brani, non vera dissolvenza incrociata. Countdown con segnali sonori,
+non composizione finale separata.
+
+TEST
+Controllo sintattico dei tre script superato. 27 verifiche automatiche con
+DOM, canvas e file system simulati. NON effettuato collaudo grafico/audio
+reale o dei permessi reali in browser. Prima dell'evento provare l'aspetto,
+un record, salvataggio, chiusura e riapertura del browser.
+Nessun file su Dropbox è stato modificato dall'assistente.
