@@ -36,6 +36,32 @@ backup JSON dall'Admin.
 
 ---
 
+## Anteprima online (GitHub Pages)
+
+La versione **statica** è pubblicata qui:
+
+**https://acollu-rgb.github.io/fassicomo-escaperoom-webapp/**
+
+È un'anteprima reale per provare grafica, domande e flusso di gioco da qualsiasi
+browser, anche da telefono. Serve il branch `gh-pages`, che contiene solo i file
+del gioco (11 file, 125 KB) e viene aggiornato dal workflow in `.github/workflows/pages.yml`.
+
+Cosa funziona su Pages:
+
+- tutte le 72 domande, i due timer, le penalità, gli hint, il badge finale;
+- le classifiche, salvate nella memoria del browser (`localStorage`);
+- importazione ed esportazione manuale del JSON dall'Admin.
+
+Cosa **non** funziona su Pages (e perché):
+
+- il salvataggio automatico sul file `classifica.json`: la File System Access API
+  richiede Chrome/Edge in contesto sicuro, quindi su Pages i tempi restano comunque
+  nella memoria del browser;
+- la versione Django multiutente, che ha bisogno di Python, database e server.
+
+Per l'evento serve una delle due installazioni vere: `npm start` su una postazione,
+oppure la VM Ubuntu con `install_escaperoom.sh`.
+
 ## Struttura del progetto
 
 Elenco completo dei file con il ruolo di ciascuno: [`docs/INDICE_FILE.md`](docs/INDICE_FILE.md).
