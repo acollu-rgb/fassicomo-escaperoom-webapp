@@ -1,8 +1,13 @@
-name: Anteprima su GitHub Pages
+name: Verifica e anteprima
 
-# Pubblica la webapp statica (root del repository) su GitHub Pages.
-# La versione Django in servers/django/ NON è pubblicabile su Pages:
-# richiede Python, database e un server applicativo.
+# Due scopi:
+#  1. controllare (sintassi + test) a ogni push — sempre attivo
+#  2. aggiornare GitHub Pages, ma solo se Pages è stato attivato
+#
+# Il branch `gh-pages` contiene già una build pronta della webapp statica.
+# Se attivi Pages scegliendo "Deploy from a branch → gh-pages", l'anteprima
+# funziona subito. Se invece preferisci "GitHub Actions", questo workflow
+# la ricostruisce e la pubblica a ogni push.
 
 on:
   push:
@@ -21,18 +26,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Prepara i file
+  verifica:
+    name: Controlli e test
     runs-on: ubuntu-latest
+    outputs:
+      pages_attivo: ${{ steps.check.outputs.attivo }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verifica che i file essenziali esistano
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: File essenziali presenti
         run: |
           set -e
-          for file in index.html css/styles.css js/levels.js js/classifica.js js/game.js js/scuola.js \
-                      assets/logo-fassicomo.svg assets/favicon.svg manifest.webmanifest; do
+          for file in index.html css/styles.css js/levels.js js/classifica.js \
+                      js/game.js js/scuola.js assets/logo-fassicomo.svg \
+                      assets/favicon.svg manifest.webmanifest; do
             if [ ! -f "$file" ]; then
               echo "::error::File mancante: $file"
               exit 1
@@ -48,15 +61,39 @@ jobs:
             echo "OK  $file"
           done
 
-      - name: Esegue i test dell'app statica
+      - name: Test dell'app statica
         run: npm test
+
+      - name: GitHub Pages è attivo?
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          stato=$(gh api "repos/${{ github.repository }}/pages" --jq '.status' 2>/dev/null)
+          if [ -n "$stato" ]; then
+            echo "attivo=true" >> "$GITHUB_OUTPUT"
+            echo "GitHub Pages attivo (stato: $stato)."
+          else
+            echo "attivo=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages non è ancora attivato: salto il deploy. La build è già disponibile sul branch gh-pages."
+          fi
+
+  build:
+    name: Prepara la build
+    needs: verifica
+    if: needs.verifica.outputs.pages_attivo == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Prepara la cartella da pubblicare
         run: |
+          set -e
           mkdir -p _site
-          # solo i file necessari al gioco: niente server, test, docs o Django
+          # solo i file del gioco: niente server, test, docs o progetto Django
           cp -r index.html manifest.webmanifest css js assets data _site/
-          # impedisce a GitHub Pages di eseguire Jekyll (nessuna trasformazione)
           touch _site/.nojekyll
           echo "File pubblicati:"
           find _site -type f | sort | sed 's/^/  /'
