@@ -18,6 +18,7 @@
 #      sudo bash installa_escape_room.sh --ip 192.168.1.50
 #      sudo bash installa_escape_room.sh --ip 192.168.1.50 --admin-password 'Scegli!2026'
 #      sudo bash installa_escape_room.sh --help
+#      sudo bash installa_escape_room.sh --diagnostica   (stato, non modifica nulla)
 #
 #  Dopo l'installazione il gioco è su  http://IP-DELLA-MACCHINA:8002/
 #
@@ -41,6 +42,7 @@ ADMIN_USER="tutor"
 ADMIN_EMAIL="tutor@example.com"
 ADMIN_PASSWORD=""
 SKIP_APT="false"
+DIAGNOSTICA="false"
 
 uso() {
   sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
@@ -54,6 +56,7 @@ while [[ $# -gt 0 ]]; do
     --admin-email)    ADMIN_EMAIL="$2"; shift 2 ;;
     --admin-password) ADMIN_PASSWORD="$2"; shift 2 ;;
     --skip-apt)       SKIP_APT="true"; shift ;;
+    --diagnostica)    DIAGNOSTICA="true"; shift ;;
     -h|--help)        uso ;;
     *) echo "Opzione sconosciuta: $1 (usa --help)" >&2; exit 1 ;;
   esac
@@ -65,6 +68,37 @@ warn() { printf '\033[1;33m  ! %s\033[0m\n' "$*"; }
 die()  { printf '\n\033[1;31m  ✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
 trap 'die "Interrotto alla riga $LINENO. Rilancia lo script: è idempotente e riprende da dove si era fermato."' ERR
+
+# ---------------------------------------------------------------- diagnostica
+if [[ "$DIAGNOSTICA" == "true" ]]; then
+  set +e   # la diagnostica non deve mai interrompersi ne' sembrare un errore
+  echo "=========== DIAGNOSTICA ESCAPE ROOM ==========="
+  echo "data:            $(date -Is)"
+  echo "utente:          $(id -un) (uid $(id -u))"
+  echo "sistema:         $(. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME")"
+  echo "python3:         $(python3 --version 2>&1)"
+  echo "python3-venv:    $(python3 -c 'import venv; print("presente")' 2>&1)"
+  echo "venv su disco:   $(ls -ld "$DEPLOY_DIR/.venv" 2>&1)"
+  echo "venv python:     $([[ -x "$DEPLOY_DIR/.venv/bin/python" ]] && echo "eseguibile" || echo "ASSENTE")"
+  echo "venv pip:        $([[ -x "$DEPLOY_DIR/.venv/bin/pip" ]] && echo "eseguibile" || echo "ASSENTE")"
+  echo "progetto:        $([[ -f "$DEPLOY_DIR/manage.py" ]] && echo "presente" || echo "ASSENTE: $DEPLOY_DIR")"
+  echo "requirements:    $(ls -l "$DEPLOY_DIR/requirements.txt" 2>&1)"
+  echo ".env:            $(ls -l "$DEPLOY_DIR/.env" 2>&1)"
+  echo "TMPDIR (shell):  ${TMPDIR:-<non impostata>}"
+  echo "/tmp scrivibile: $([[ -w /tmp ]] && echo si || echo NO)"
+  echo "spazio /tmp:     $(df -h /tmp 2>/dev/null | tail -1 | awk '{print $4" liberi"}')"
+  echo "spazio /srv:     $(df -h /srv 2>/dev/null | tail -1 | awk '{print $4" liberi"}')"
+  echo "cwd attuale:     $(pwd 2>/dev/null || echo INESISTENTE)"
+  stato_servizio() { systemctl is-active "$1" 2>/dev/null || echo "assente/non attivo"; }
+  echo "postgresql:      $(stato_servizio postgresql)"
+  echo "nginx:           $(stato_servizio nginx)"
+  echo "servizio:        $(stato_servizio escaperoom)"
+  echo
+  echo "--- riga di comando usata di recente ---"
+  echo "cd $DEPLOY_DIR && runuser -u escaperoom -- .venv/bin/pip install -r requirements.txt"
+  echo "==============================================="
+  exit 0
+fi
 
 # ---------------------------------------------------------------- controlli
 log "Controlli preliminari"
