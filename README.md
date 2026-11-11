@@ -38,6 +38,8 @@ backup JSON dall'Admin.
 
 ## Struttura del progetto
 
+Elenco completo dei file con il ruolo di ciascuno: [`docs/INDICE_FILE.md`](docs/INDICE_FILE.md).
+
 ```
 fassicomo-escaperoom-webapp/
 ├── index.html                 pagina unica dell'app
