@@ -146,13 +146,14 @@ PROJECT_SRC="${WORK_DIR}/${SRC_SUBDIR}"
 [[ -f "$PROJECT_SRC/manage.py" ]] || die "manage.py non trovato in ${PROJECT_SRC}: struttura del repository inattesa."
 
 mkdir -p "$DEPLOY_DIR"
-cd "$PROJECT_SRC"
-# shopt -s dotglob: include anche i file che iniziano con il punto (.env.example,
-# .gitignore). Senza, andrebbero persi.
+# Si copia con i percorsi assoluti, SENZA spostare la directory corrente:
+# $WORK_DIR viene cancellata subito dopo, e una shell con la cwd inesistente
+# fa fallire pip con "OSError: [Errno 2] No such file or directory".
 shopt -s dotglob nullglob
-for voce in *; do
-  case "$voce" in
-    .|..|.git|.venv|db.sqlite3|staticfiles|__pycache__|.env) continue ;;
+for voce in "$PROJECT_SRC"/*; do
+  base="$(basename "$voce")"
+  case "$base" in
+    .git|.venv|db.sqlite3|staticfiles|__pycache__|.env) continue ;;
   esac
   cp -a "$voce" "$DEPLOY_DIR"/
 done
@@ -162,6 +163,8 @@ chmod +x "$DEPLOY_DIR"/scripts/*.sh 2>/dev/null || true
 find "$DEPLOY_DIR" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
 ok "Progetto copiato in ${DEPLOY_DIR} ($(du -sh "$DEPLOY_DIR" | cut -f1))"
 rm -rf "$WORK_DIR"
+# la cwd non deve mai restare su una cartella cancellata
+cd "$DEPLOY_DIR"
 
 if [[ ! -f "$DEPLOY_DIR/manage.py" ]]; then
   die "${DEPLOY_DIR}/manage.py non trovato: copia del progetto incompleta."
