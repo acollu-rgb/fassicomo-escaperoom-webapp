@@ -12,13 +12,14 @@ sono fissi nel programma.
 |------|-----------|
 | `index.html` | struttura della pagina (gioco, classifiche, modali) |
 | `css/styles.css` | grafica completa, responsive e da stampa |
-| `js/levels.js` | 8 livelli × 5 varianti, titoli, tempi e penalità |
+| `js/levels.js` | 8 livelli × 9 varianti (72 domande), titoli, tempi e penalità |
 | `js/game.js` | motore di gioco, timer, audio, badge finale |
 | `js/classifica.js` | classifiche Top 3 e pannello Admin |
 | `js/scuola.js` | animazione "SCUOLA FASSICOMO" |
 | `data/classifica.json` | classifica inizialmente vuota, da collegare in Admin |
 | `server.js` | server statico locale senza dipendenze |
-| `tests/run-tests.js` | 67 verifiche automatiche |
+| `tests/run-tests.js` | 72 verifiche automatiche |
+| `servers/django/` | progetto Django multiutente (opzionale) |
 
 ## Animazione della scuola
 
@@ -78,7 +79,8 @@ caso l'app usa la memoria del browser e il backup manuale, senza errori bloccant
 ## Verifiche effettuate
 
 - Controllo sintattico di `levels.js`, `classifica.js`, `scuola.js`, `game.js`, `server.js`.
-- 67 test automatici con DOM, canvas, `localStorage`, IndexedDB e File System API simulati.
+- 72 test automatici con DOM, canvas, `localStorage`, IndexedDB e File System API simulati,
+  inclusa la coerenza delle 72 domande con il seed del progetto Django.
 - Esito in `tests/risultati.json` (si rigenera con `npm test`).
 
 Non è stato effettuato un collaudo grafico, audio o dei permessi reali in un browser:

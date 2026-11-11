@@ -1,0 +1,52 @@
+{% load static %}<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Escape Room Cyber — Scuola Fassicomo{% endblock %}</title>
+  <meta name="description" content="Escape room multigiocatore sulla cybersicurezza della Scuola Fassicomo.">
+  <meta name="theme-color" content="#07030a">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  {% csrf_token %}
+  {% block head %}{% endblock %}
+</head>
+<body data-page="{% block page_name %}base{% endblock %}">
+  <canvas id="matrixCanvas" aria-hidden="true"></canvas>
+  <canvas id="schoolCanvas" aria-hidden="true"></canvas>
+
+  <a class="skip-link" href="#main">Vai al contenuto</a>
+
+  <main class="shell" id="main">
+    <header class="brand">
+      <div class="brand-logo">
+        <img src="{% static 'img/logo-fassicomo.svg' %}" alt="Fondazione Fassicomo — Scuola Fassicomo" width="200" height="86">
+      </div>
+      <div class="brand-copy">
+        <p class="brand-kicker">Fondazione Fassicomo</p>
+        <h1><a href="{% url 'game:index' %}">Escape Room Cyber</a></h1>
+        <p class="brand-sub">Laboratorio di cybersicurezza · modalità multiutente</p>
+      </div>
+      <nav class="brand-nav">
+        <a class="chip" href="{% url 'game:index' %}">Nuova partita</a>
+        <a class="chip" href="{% url 'game:leaderboard' %}">Classifica</a>
+      </nav>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    <footer class="site-footer">
+      <div>Scuola Fassicomo · {{ game_config|length }} modalità di gioco</div>
+      <div>Domande servite dal server · timer validato lato server</div>
+    </footer>
+  </main>
+
+  <div id="toast-area" class="toast-area" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="{% static 'js/scuola.js' %}" defer></script>
+  <script src="{% static 'js/audio.js' %}" defer></script>
+  <script src="{% static 'js/matrix.js' %}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

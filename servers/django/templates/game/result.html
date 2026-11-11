@@ -1,0 +1,78 @@
+{% extends "game/base.html" %}
+{% load static game_tags %}
+
+{% block title %}{% if is_win %}Vittoria{% else %}Tempo scaduto{% endif %} — {{ session.team_name }}{% endblock %}
+{% block page_name %}result{% endblock %}
+
+{% block content %}
+<section class="panel">
+  {% if is_win %}
+    <div class="result win">
+      <h2>Escape room completata</h2>
+
+      <div class="badge">
+        <div class="badge-brand">
+          <img src="{% static 'img/logo-fassicomo.svg' %}" alt="Fondazione Fassicomo" width="150" height="64">
+        </div>
+        <h3>Badge ufficiale hacker</h3>
+        <p class="badge-school">Scuola Fassicomo</p>
+        <p style="margin-top:14px;">Agente: <strong>{{ session.team_name }}</strong></p>
+        <p class="big">{{ formatted_time }}</p>
+        <p class="badge-meta">Tempo reale di completamento</p>
+        <p class="badge-meta">
+          Errori: {{ session.error_count }} ·
+          Modalità: {{ session.get_mode_display }} ({{ session.total_levels }} livelli) ·
+          Completata alle {{ session.finished_at|date:"H:i" }}
+        </p>
+        {% if position and position <= leaderboard_size %}
+          <p class="feedback ok" style="margin-top:14px;">Sei nella top {{ leaderboard_size }}: posizione {{ position }}!</p>
+        {% endif %}
+      </div>
+
+      <p class="note">Mostra questa schermata al tutor. Il tempo è stato calcolato e validato dal server.</p>
+    </div>
+  {% else %}
+    <div class="result lose">
+      <h2>System lockdown</h2>
+      <p class="note">
+        Il tempo a disposizione è scaduto{% if session.status == 'expired' %} mentre eri al livello
+        {{ session.current_level }} di {{ session.total_levels }}{% endif %}.
+      </p>
+      <p class="note">Errori commessi: {{ session.error_count }}. Nessun tempo registrato in classifica.</p>
+    </div>
+  {% endif %}
+
+  <div class="result-actions" style="margin-top:22px;">
+    <a class="btn btn-primary" href="{% url 'game:index' %}">Nuova partita</a>
+    <a class="btn btn-ghost" href="{% url 'game:leaderboard' %}">Classifiche complete</a>
+    <button class="btn btn-ghost" type="button" onclick="window.print()">Stampa badge</button>
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="lb-title">
+  <h2 id="lb-title" class="section-title">Migliori tempi aggiornati</h2>
+  <div class="lb-grid">
+    {% for key, entries in leaderboard.items %}
+      <div class="lb-card">
+        <h3>{% if key == 'rapid' %}Rapida{% else %}Completa{% endif %}
+          <span class="lb-tag">{% if key == 'rapid' %}5 livelli{% else %}8 livelli{% endif %}</span>
+        </h3>
+        <table>
+          <thead><tr><th scope="col">Pos.</th><th scope="col">Squadra</th><th scope="col">Tempo</th></tr></thead>
+          <tbody>
+            {% for entry in entries %}
+              <tr{% if entry.team_name == session.team_name %} class="is-new"{% endif %}>
+                <td class="pos">{{ entry.position }}</td>
+                <td>{{ entry.team_name }}</td>
+                <td class="time">{{ entry.formatted }}</td>
+              </tr>
+            {% empty %}
+              <tr><td class="empty" colspan="3">Nessun risultato</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

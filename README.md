@@ -3,7 +3,15 @@
 Webapp didattica di cybersicurezza: un escape room a livelli con timer, penalità,
 hint, classifiche dei migliori tempi e pannello Admin per il tutor.
 
-Versione **2.0.4**.
+Versione **2.0.4** — disponibile in due forme:
+
+| Versione | Dove | Quando usarla |
+|----------|------|---------------|
+| **Statica** (file singoli) | root del repository | postazione singola, apertura da browser, nessun server |
+| **Django multiutente** | `servers/django/` | più squadre in contemporanea, timer validato dal server, classifiche condivise |
+
+Entrambe condividono le stesse **72 domande**: 40 originali + 32 aggiuntive
+(4 per livello), con 9 varianti per ciascuno degli 8 livelli.
 
 ---
 
@@ -39,7 +47,7 @@ fassicomo-escaperoom-webapp/
 ├── css/
 │   └── styles.css             foglio di stile completo
 ├── js/
-│   ├── levels.js              contenuti: 8 livelli × 5 varianti, modalità
+│   ├── levels.js              contenuti: 8 livelli × 9 varianti (72 domande)
 │   ├── classifica.js          classifiche Top 3, Admin, salvataggi
 │   ├── scuola.js              animazione "SCUOLA FASSICOMO"
 │   └── game.js                motore di gioco, timer, audio, badge
@@ -49,8 +57,9 @@ fassicomo-escaperoom-webapp/
 ├── data/
 │   └── classifica.json        classifica iniziale vuota, da collegare
 ├── tests/
-│   ├── run-tests.js           67 verifiche automatiche
+│   ├── run-tests.js           72 verifiche automatiche
 │   └── risultati.json         esito dell'ultima esecuzione
+├── servers/django/            progetto Django multiutente (vedi il suo README)
 └── docs/
     ├── LEGGIMI-originale.txt  istruzioni della versione 2.0.3
     ├── LEGGIMI_versione_2_0_4.md
@@ -80,7 +89,7 @@ permette di modificarli.
 7. **Enigma (logical password)** — sequenze logiche.
 8. **Keyboard cipher** — codici da tastiera e inversioni.
 
-Ogni livello ha 5 varianti: dopo un errore il gioco ripropone lo stesso livello con
+Ogni livello ha **9 varianti**: dopo un errore il gioco ripropone lo stesso livello con
 una variante diversa (mai la stessa appena sbagliata).
 
 ---
@@ -166,14 +175,35 @@ posto della musica con un segnale per ogni secondo.
 npm test
 ```
 
-67 verifiche automatiche con DOM, canvas, `localStorage`, IndexedDB e File System
-API simulati: sintassi, contenuti dei livelli, ordinamento delle classifiche,
-persistenza, penalità, passaggio di livello, game over e badge finale.
+72 verifiche automatiche con DOM, canvas, `localStorage`, IndexedDB e File System
+API simulati: sintassi, contenuti dei 72 quesiti, codici delle varianti, ordinamento
+delle classifiche, persistenza, penalità, passaggio di livello, game over e badge finale.
 L'esito viene scritto in `tests/risultati.json`.
 
 **Non** è stato eseguito un collaudo grafico/audio reale o dei permessi di
 scrittura in un browser: prima dell'evento prova una partita completa, un record,
 il salvataggio e la riapertura del browser.
+
+---
+
+## Versione Django multiutente
+
+In `servers/django/` c'è il progetto Django completo descritto nella specifica:
+modelli, API JSON, 9 pagine del livello 2, comando `seed_questions` con le 72
+domande, script di installazione/aggiornamento/backup, unit systemd e configurazione
+Nginx sulla porta 8002.
+
+```bash
+cd servers/django
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env          # DATABASE_URL vuoto → SQLite
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py seed_questions
+.venv/bin/python manage.py runserver 8002
+```
+
+Istruzioni complete, API, deploy su Ubuntu 24.04 e risoluzione problemi:
+[`servers/django/README.md`](servers/django/README.md).
 
 ---
 

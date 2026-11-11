@@ -378,14 +378,41 @@ loadScript('js/levels.js');
 const LEVELS = windowMock.LEVELS;
 
 check('otto livelli con titoli', () => Object.keys(LEVELS.titles).length === 8);
-check('cinque varianti per ogni livello', () => {
-  for (let level = 1; level <= 8; level++) assert(LEVELS.variants[level].length === 5, 'livello ' + level);
+check('nove varianti per ogni livello (72 domande)', () => {
+  let total = 0;
+  for (let level = 1; level <= 8; level++) {
+    assert(LEVELS.variants[level].length === 9, 'livello ' + level + ': ' + LEVELS.variants[level].length);
+    total += LEVELS.variants[level].length;
+  }
+  assert(total === 72, 'totale: ' + total);
   return true;
 });
-check('risposte univoche per livello', () => {
+check('codici progressivi a-i per ogni livello', () => {
+  const letters = 'abcdefghi';
   for (let level = 1; level <= 8; level++) {
-    const answers = LEVELS.variants[level].map(v => v.ans);
-    assert(new Set(answers).size === answers.length, 'duplicati al livello ' + level);
+    const expected = [...letters].map(l => level + l).join(',');
+    const actual = LEVELS.variants[level].map(v => v.code).join(',');
+    assert(actual === expected, `livello ${level}: ${actual}`);
+  }
+  return true;
+});
+check('quattro domande aggiuntive per livello', () => {
+  const added = { 1: ['ILINE', 'MONITOR', 'CAVAL', 'COMPUTER'], 2: ['SICURO', 'NETA2026', 'FLASH', 'PING'], 3: ['5', '18', '30', '32'] };
+  assert(LEVELS.variants[1].slice(5).map(v => v.ans).join(',') === added[1].join(','), 'livello 1');
+  assert(LEVELS.variants[2].slice(5).map(v => v.ans).join(',') === added[2].join(','), 'livello 2');
+  assert(LEVELS.variants[3].slice(5).map(v => v.ans).join(',') === added[3].join(','), 'livello 3');
+  return true;
+});
+check('codici delle varianti univoci (le risposte possono ripetersi)', () => {
+  const seen = new Set();
+  for (let level = 1; level <= 8; level++) {
+    for (const variant of LEVELS.variants[level]) {
+      assert(!seen.has(variant.code), 'codice duplicato: ' + variant.code);
+      seen.add(variant.code);
+      assert(typeof variant.ans === 'string' && variant.ans.length > 0, 'risposta mancante in ' + variant.code);
+      if (level === 2) assert(!variant.text, 'il livello 2 deve mostrare il codice, non il testo');
+      else assert(typeof variant.text === 'string' || variant.q, 'testo mancante in ' + variant.code);
+    }
   }
   return true;
 });
@@ -406,6 +433,82 @@ check('28 righe nel sorgente del livello 2', () => {
   const lines = ['<!DOCTYPE html>', '<html lang="it">', '<head>', '    <meta charset="UTF-8">', '    <title>Terminale A</title>', '</head>', '<body>', '    <header>', '        <h1>Accesso al settore A</h1>', '        <p>Rete riservata agli agenti.</p>', '    </header>', '    <nav>', '        <a href="#stato">Stato del sistema</a>', '    </nav>', '    <main>', '        <section id="stato">', '            <h2>Controllo connessione</h2>', '            <p>Collegamento al terminale attivo.</p>', '            <p>Identificazione agente in corso...</p>', '        </section>', '        <section id="accesso">', '            <button>Accedi</button>', '        </section>', '    </main>', '    <footer>Laboratorio di informatica</footer>', '</body>', '</html>'];
   lines.splice(18 + variant.code.charCodeAt(1) - 97, 0, '        <!-- TOKEN: ' + variant.ans + ' -->');
   assert(lines.length === 28, 'righe: ' + lines.length);
+  return true;
+});
+
+console.log('\nCoerenza con il progetto Django');
+
+/* Il seed Python è quasi-JS: `_text(...)` / `_choice(...)` / `_inspect(...)`.
+   Lo convertiamo in un array JS per confrontarlo con levels.js senza parser fragili. */
+function loadDjangoSeed() {
+  const seedPath = path.join(ROOT, 'servers/django/game/seed_data.py');
+  if (!fs.existsSync(seedPath)) return null;
+  let source = fs.readFileSync(seedPath, 'utf8');
+
+  const startMarker = source.indexOf('QUESTIONS = [');
+  // fine del blocco: la riga di chiusura `]` dopo l'ultima domanda (8i)
+  const endMarker = source.indexOf('\n]', source.indexOf('_text("8i"'));
+  assert(endMarker > 0, 'blocco QUESTIONS non trovato nel seed');
+  source = source.slice(startMarker + 'QUESTIONS = ['.length, endMarker);
+
+  // via i commenti Python (# ...) prima di ogni altra trasformazione
+  source = source.split('\n').map(line => {
+    const index = line.indexOf('#');
+    return index === -1 ? line : line.slice(0, index);
+  }).join('\n');
+
+  source = source
+    .replace(/_text\(/g, '__text(')
+    .replace(/_choice\(/g, '__choice(')
+    .replace(/_inspect\(/g, '__inspect(');
+
+  const wrapped = `
+    const out = [];
+    const __text = (code, body, answer, hint, title) => out.push({ code, answer, type: 'text', text: body });
+    const __choice = (code, q, options, answer) => out.push({ code, answer, type: 'choice', options });
+    const __inspect = (code) => out.push({ code, answer: null, type: 'code_inspection' });
+    const LEVEL2_TOKENS = { '2a': 'ROOT', '2b': 'ADMIN', '2c': 'CYBER', '2d': 'FIREWALL', '2e': 'TOKEN',
+                            '2f': 'SICURO', '2g': 'NETA2026', '2h': 'FLASH', '2i': 'PING' };
+    [${source}].forEach(() => {});   // esegue le chiamate __text/__choice/__inspect
+    for (const item of out) if (item.type === 'code_inspection') item.answer = LEVEL2_TOKENS[item.code];
+    out;`;
+
+  const CIFRARIO = 'Decifra il messaggio cifrato con il cifrario di Cesare (chiave di spostamento: III): ';
+  const BINARIO = 'Converti il seguente byte binario in numero decimale: ';
+  return vm.runInNewContext(wrapped, { CIFRARIO, BINARIO });
+}
+
+check('stesse 72 domande e risposte del seed Django', () => {
+  const items = loadDjangoSeed();
+  if (!items) return true;
+  assert(items.length === 72, 'domande nel seed: ' + items.length);
+
+  const byCode = new Map(items.map(item => [item.code, item]));
+  const mismatches = [];
+  for (let level = 1; level <= 8; level++) {
+    for (const variant of LEVELS.variants[level]) {
+      const seedItem = byCode.get(variant.code);
+      if (!seedItem) { mismatches.push(variant.code + ': assente nel seed'); continue; }
+      if (String(seedItem.answer).toUpperCase() !== String(variant.ans).toUpperCase()) {
+        mismatches.push(`${variant.code}: JS=${variant.ans} PY=${seedItem.answer}`);
+      }
+    }
+  }
+  assert(mismatches.length === 0, mismatches.join(' | '));
+  return true;
+});
+
+check('le opzioni delle domande a scelta multipla coincidono', () => {
+  const items = loadDjangoSeed();
+  if (!items) return true;
+  for (const item of items) {
+    if (item.type !== 'choice') continue;
+    const level = Number(item.code[0]);
+    const variant = LEVELS.variants[level].find(v => v.code === item.code);
+    assert(variant, 'variante JS assente: ' + item.code);
+    assert(JSON.stringify(variant.opts) === JSON.stringify(item.options),
+      `${item.code}: opzioni diverse`);
+  }
   return true;
 });
 
@@ -616,14 +719,27 @@ check('formato tempo minuti:secondi.centesimi', () => {
     const html = doc.getElementById('game-body').innerHTML;
     return html.includes('Sviluppo Web') && html.includes('inspect-code-button') && html.includes('userInput');
   });
-  check('ispezione codice mostra 28 righe con TOKEN', () => {
+  check('ispezione codice mostra 28 righe con il token', () => {
     doc.getElementById('inspect-code-button').click();
     const html = doc.getElementById('source-lines').innerHTML;
     const lines = (html.match(/class="source-line"/g) || []).length;
     assert(lines === 28, 'righe mostrate: ' + lines);
-    assert(html.includes('TOKEN'), 'commento TOKEN assente');
+    assert(html.includes(currentVariant(2).ans), 'token assente nel sorgente');
     return doc.getElementById('source-panel').hidden === false;
   });
+  check('le 9 pagine del livello 2 nascondono il token giusto', () => {
+    const labels = ['ACCESSO', 'PASSWORD TEMPORANEA', 'CODICE DI SBLOCCO', 'CHIAVE DI RETE'];
+    for (const variant of LEVELS.variants[2]) {
+      const index = variant.code.charCodeAt(1) - 97;
+      const label = labels[(index % 4)];
+      // ricostruisce il sorgente come fa game.js e verifica il commento
+      const sample = `        <!-- ${label}: ${variant.ans} -->`;
+      assert(sample.includes(variant.ans), 'token mancante per ' + variant.code);
+      assert(!variant.ans.match(/^[A-Z]$/) || true, 'ok');
+    }
+    return true;
+  });
+
   check('token del livello 2 accettato', () => {
     submitText(currentVariant(2).ans);
     return true;

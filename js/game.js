@@ -377,7 +377,7 @@
       html += `
         <div class="question-box">
           Il sito nasconde un codice di accesso nel suo codice sorgente.<br>
-          Premi <strong>Ispeziona codice</strong>, cerca il commento <code>TOKEN</code> e inserisci il valore trovato.
+          Premi <strong>Ispeziona codice</strong>, cerca il commento che contiene la parola <code>TOKEN</code> e inserisci il valore che trovi dopo i due punti (può essere una parola o un codice).
         </div>
         <button id="inspect-code-button" type="button" class="btn btn-primary" aria-expanded="false" aria-controls="source-panel" style="margin-bottom:16px;">Ispeziona codice</button>
         <section id="source-panel" class="source-panel" hidden aria-labelledby="source-title">
@@ -601,7 +601,7 @@
       box.innerHTML = `<p>${escapeHtml(state.currentVariant.hint)}</p>
         <button type="button" class="btn btn-ghost" style="margin-top:16px;" onclick="closeHint()">Torna alla missione</button>`;
     } else if (state.currentLevel === 2) {
-      box.innerHTML = `<p>Il valore cercato si trova in un commento HTML che inizia con <code>TOKEN</code>. Le righe sono numerate: scorri il riquadro del codice.</p>
+      box.innerHTML = `<p>Il valore cercato si trova in un commento HTML. L’etichetta del commento cambia (per esempio <code>ACCESSO</code>, <code>PASSWORD TEMPORANEA</code>, <code>CHIAVE DI RETE</code>): cerca la parola <code>TOKEN</code> e copia solo ciò che segue i due punti. Le righe sono numerate: scorri il riquadro del codice.</p>
         <button type="button" class="btn btn-ghost" style="margin-top:16px;" onclick="closeHint()">Torna alla missione</button>`;
     } else {
       return;
@@ -615,8 +615,19 @@
 
   /* ---------------- Livello 2: codice sorgente ---------------- */
 
+  /* Pagine del livello 2: una per variante (a-i).
+     Il commento con il token cambia posizione a ogni variante. */
+  const SOURCE_LABELS = {
+    2: 'ACCESSO',
+    3: 'PASSWORD TEMPORANEA',
+    4: 'CODICE DI SBLOCCO',
+    5: 'CHIAVE DI RETE'
+  };
+
   function buildSource(variant) {
+    const index = variant.code.charCodeAt(1) - 97;      // 0..8
     const name = variant.code.slice(-1).toUpperCase();
+    const label = SOURCE_LABELS[(index % 4) + 2];
     const lines = [
       '<!DOCTYPE html>',
       '<html lang="it">',
@@ -646,8 +657,9 @@
       '</body>',
       '</html>'
     ];
-    const position = 18 + variant.code.charCodeAt(1) - 97;
-    lines.splice(position, 0, `        <!-- TOKEN: ${variant.ans} -->`);
+    // sempre 28 righe, commento in posizione variabile
+    const position = 17 + (index % 6);
+    lines.splice(position, 0, `        <!-- ${label}: ${variant.ans} -->`);
     return lines.join('\n');
   }
 

@@ -1,0 +1,17 @@
+{% extends "game/base.html" %}
+
+{% block title %}Errore {{ code }} — Escape Room Fassicomo{% endblock %}
+{% block page_name %}error{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="result lose">
+    <h2>Qualcosa non ha funzionato</h2>
+    <p class="note">{{ message }}</p>
+    <p class="note">Codice: <code>{{ code }}</code></p>
+    <div class="result-actions" style="margin-top:20px;">
+      <a class="btn btn-primary" href="{% url 'game:index' %}">Torna all'inizio</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

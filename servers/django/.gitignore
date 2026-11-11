@@ -1,0 +1,20 @@
+# Segreti e dati locali — NON versionare
+.env
+db.sqlite3
+db.sqlite3-journal
+
+# Generati da collectstatic
+staticfiles/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+.venv/
+*.log
+logs/
+
+# Backup del database
+backup/
+
+# Media caricati a runtime (le 9 pagine del livello 2 sono versionate)
+media/level2/*.tmp

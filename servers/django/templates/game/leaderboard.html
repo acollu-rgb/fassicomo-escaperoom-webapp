@@ -1,0 +1,55 @@
+{% extends "game/base.html" %}
+{% load static game_tags %}
+
+{% block title %}Classifiche — Escape Room Fassicomo{% endblock %}
+{% block page_name %}leaderboard{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <h2 class="section-title">Classifiche ufficiali</h2>
+  <p class="section-sub">
+    Solo le partite completate entrano in classifica. In caso di parità resta davanti chi ha finito prima.
+  </p>
+
+  <div class="lb-grid">
+    {% for key, entries in leaderboard.items %}
+      <div class="lb-card">
+        <h3>{% if key == 'rapid' %}Rapida{% else %}Completa{% endif %}
+          <span class="lb-tag">{% if key == 'rapid' %}5 livelli{% else %}8 livelli{% endif %}</span>
+        </h3>
+        <table>
+          <thead>
+            <tr><th scope="col">Pos.</th><th scope="col">Squadra</th><th scope="col">Tempo</th><th scope="col">Errori</th></tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+              <tr>
+                <td class="pos">{{ entry.position }}</td>
+                <td>{{ entry.team_name }}</td>
+                <td class="time">{{ entry.formatted }}</td>
+                <td>{{ entry.error_count }}</td>
+              </tr>
+            {% empty %}
+              <tr><td class="empty" colspan="4">Nessun risultato: completa una partita per entrare in classifica.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2 class="section-title">Stato del server</h2>
+  <ul class="stats">
+    <li><span>Partite in corso</span><strong>{{ active_sessions }}</strong></li>
+    <li><span>Partite completate</span><strong>{{ completed_sessions }}</strong></li>
+    <li><span>Ora del server</span><strong>{{ now|date:"d/m/Y H:i" }}</strong></li>
+  </ul>
+  <p class="section-sub" style="margin-top:18px;">
+    La classifica è aggiornata automaticamente. Il tutor può azzerarla solo dall'Admin Django,
+    con un'azione esplicita e confermata.
+  </p>
+  <a class="btn btn-primary" href="{% url 'game:index' %}">Torna all'inizio</a>
+</section>
+{% endblock %}

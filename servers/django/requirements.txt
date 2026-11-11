@@ -1,0 +1,12 @@
+# Dipendenze Python — Escape Room Fassicomo
+# Installazione: .venv/bin/pip install -r requirements.txt
+
+Django==5.1.15
+gunicorn==23.0.0
+whitenoise==6.8.2
+psycopg[binary]==3.2.3
+python-dotenv==1.0.1
+
+# Sviluppo / verifica (facoltativo)
+# pytest==8.3.4
+# pytest-django==4.9.0
