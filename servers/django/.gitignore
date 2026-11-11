@@ -1,6 +1,7 @@
 # Segreti e dati locali — NON versionare
 .env
 db.sqlite3
+# anche se SQLite vive fuori dal progetto, per sicurezza
 db.sqlite3-journal
 
 # Generati da collectstatic

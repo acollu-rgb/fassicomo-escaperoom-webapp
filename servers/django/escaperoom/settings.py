@@ -143,11 +143,15 @@ if DATABASE_URL.startswith("postgres"):
         }
     }
 else:
-    # fallback per sviluppo locale e per i test automatici
+    # Fallback per sviluppo locale e test automatici.
+    # Il file sta FUORI dal progetto: non va mai versionato né perso
+    # cancellando la cartella del codice.
+    SQLITE_PATH = Path(env("SQLITE_PATH", Path.home() / ".local" / "share" / "escaperoom" / "db.sqlite3"))
+    SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": SQLITE_PATH,
         }
     }
 

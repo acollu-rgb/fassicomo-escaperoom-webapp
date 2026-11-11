@@ -98,6 +98,11 @@ cp .env.example .env      # DATABASE_URL vuoto → SQLite
 
 Apri <http://localhost:8002>.
 
+> Con SQLite il database **non** viene creato dentro il progetto ma in
+> `~/.local/share/escaperoom/db.sqlite3` (modificabile con `SQLITE_PATH`).
+> In questo modo non finisce nel repository e non si perde cancellando la
+> cartella del codice. In produzione si usa PostgreSQL: `db.sqlite3` non serve.
+
 ---
 
 ## 4. Struttura
@@ -198,6 +203,9 @@ Tempi e penalità **non compaiono** come campi modificabili: sono costanti di co
 
 # manutenzione
 .venv/bin/python manage.py shell -c "from game.services import expire_stale_sessions; print(expire_stale_sessions())"
+
+# reset completo del database SQLite di sviluppo (fuori dal progetto)
+rm -f ~/.local/share/escaperoom/db.sqlite3
 
 # pagine livello 2
 .venv/bin/python scripts/genera_pagine_livello2.py --check
