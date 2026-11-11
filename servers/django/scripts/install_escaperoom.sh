@@ -46,11 +46,34 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+
+# --------------------------------------------------------------- utility .env
+# Carica .env in modo sicuro: riga per riga, ignorando commenti e righe vuote.
+# Il vecchio "env $(grep -v '^#' .env | xargs)" si rompeva con valori contenenti
+# spazi, caratteri speciali o righe vuote.
+run_as_service() {
+  local -a envs=()
+  local line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%$'\r'}"                      # rimuove eventuale CR
+    [[ -z "${line// }" ]] && continue           # riga vuota
+    [[ "$line" == \#* ]] && continue            # commento
+    [[ "$line" != *=* ]] && continue            # non e' KEY=VALUE
+    envs+=("$line")
+  done < "$DEPLOY_DIR/.env"
+  sudo -u "$SERVICE_USER" env "${envs[@]}" "$@"
+}
+
+SCRIPT_VERSION="2026-11-11-b"
+
 log()  { printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m[x] %s\033[0m\n' "$*" >&2; exit 1; }
 
 [[ $EUID -eq 0 ]] || die "Esegui lo script con sudo."
+
+printf '\033[1;34m[i] install_escaperoom.sh versione %s\033[0m\n' "$SCRIPT_VERSION"
+printf '    cartella progetto: %s\n' "$DEPLOY_DIR"
 
 if ! command -v lsb_release >/dev/null 2>&1 || [[ "$(lsb_release -rs)" != "24.04" ]]; then
   warn "Sistema diverso da Ubuntu 24.04: proseguo, ma verifica manualmente."
@@ -139,6 +162,19 @@ chown "root:${SERVICE_USER}" "$ENV_FILE" 2>/dev/null || true
 
 # ------------------------------------------------------------------ venv
 log "Virtualenv e dipendenze Python"
+
+# se la copia non è riuscita, pip fallirebbe con un errore criptico:
+# meglio fermarsi subito spiegando cosa manca
+for richiesto in manage.py requirements.txt escaperoom/settings.py; do
+  [[ -e "$DEPLOY_DIR/$richiesto" ]] \
+    || die "File mancante: ${DEPLOY_DIR}/${richiesto}
+La copia del progetto non è andata a buon fine. Cancella ${DEPLOY_DIR} e rilancia:
+  sudo rm -rf ${DEPLOY_DIR} && sudo bash $0"
+done
+if [[ ! -s "$DEPLOY_DIR/requirements.txt" ]]; then
+  die "${DEPLOY_DIR}/requirements.txt è vuoto: copia incompleta."
+fi
+log "File del progetto presenti (requirements.txt: $(wc -l < "$DEPLOY_DIR/requirements.txt") righe)"
 # un .venv creato da root (o interrotto a metà) impedirebbe l'installazione:
 # se il python del venv non è eseguibile lo ricreo da zero
 if [[ -d "$DEPLOY_DIR/.venv" && ! -x "$DEPLOY_DIR/.venv/bin/python" ]]; then
@@ -146,24 +182,56 @@ if [[ -d "$DEPLOY_DIR/.venv" && ! -x "$DEPLOY_DIR/.venv/bin/python" ]]; then
   rm -rf "$DEPLOY_DIR/.venv"
 fi
 if [[ ! -x "$DEPLOY_DIR/.venv/bin/python" ]]; then
-  sudo -u "$SERVICE_USER" "$PYTHON_BIN" -m venv "$DEPLOY_DIR/.venv"
+  sudo -u "$SERVICE_USER" "$PYTHON_BIN" -m venv "$DEPLOY_DIR/.venv" \
+    || die "Creazione del virtualenv fallita in ${DEPLOY_DIR}/.venv.
+Controlla che python3-venv sia installato:  sudo apt-get install -y python3-venv"
 fi
-sudo -u "$SERVICE_USER" "$DEPLOY_DIR/.venv/bin/pip" install --quiet --upgrade pip wheel
-sudo -u "$SERVICE_USER" "$DEPLOY_DIR/.venv/bin/pip" install --quiet -r "$DEPLOY_DIR/requirements.txt"
+[[ -x "$DEPLOY_DIR/.venv/bin/python" ]] || die "Il virtualenv non contiene python: ${DEPLOY_DIR}/.venv"
+
+# pip può mancare se il venv è stato creato con python3-venv incompleto
+if [[ ! -x "$DEPLOY_DIR/.venv/bin/pip" ]]; then
+  warn "pip assente nel virtualenv: lo installo con ensurepip"
+  sudo -u "$SERVICE_USER" "$DEPLOY_DIR/.venv/bin/python" -m ensurepip --upgrade \
+    || die "ensurepip fallito: installa python3-venv e rilancia."
+fi
+
+# pip costruisce i pacchetti in una cartella temporanea: se TMPDIR punta a
+# qualcosa che non esiste fallisce con "OSError: [Errno 2]"
+if [[ -n "${TMPDIR:-}" && ! -d "${TMPDIR:-}" ]]; then
+  warn "TMPDIR=${TMPDIR} non esiste: uso /tmp"
+  export TMPDIR=/tmp
+fi
+mkdir -p "${TMPDIR:-/tmp}"
+chmod 1777 "${TMPDIR:-/tmp}" 2>/dev/null || true
+
+cd "$DEPLOY_DIR"   # pip deve girare in una cartella esistente e leggibile
+sudo -u "$SERVICE_USER" "$DEPLOY_DIR/.venv/bin/pip" install --quiet --upgrade pip wheel \
+  || die "Aggiornamento di pip fallito."
+if ! sudo -u "$SERVICE_USER" "$DEPLOY_DIR/.venv/bin/pip" install --quiet -r "$DEPLOY_DIR/requirements.txt"; then
+  warn "Diagnostica:"
+  printf '    utente:        %s\n' "$SERVICE_USER"
+  printf '    cartella:      %s (esiste: %s)\n' "$DEPLOY_DIR" "$([[ -d "$DEPLOY_DIR" ]] && echo si || echo NO)"
+  printf '    cwd attuale:   %s\n' "$(pwd 2>/dev/null || echo INESISTENTE)"
+  printf '    TMPDIR:        %s (esiste: %s)\n' "${TMPDIR:-/tmp}" "$([[ -d "${TMPDIR:-/tmp}" ]] && echo si || echo NO)"
+  printf '    requirements:  %s\n' "$(ls -l "$DEPLOY_DIR/requirements.txt" 2>&1)"
+  printf '    venv python:   %s\n' "$(ls -l "$DEPLOY_DIR/.venv/bin/python" 2>&1)"
+  printf '    spazio libero: %s\n' "$(df -h "${TMPDIR:-/tmp}" 2>/dev/null | tail -1)"
+  die "Installazione delle dipendenze fallita. Copia questo blocco e l'errore sopra."
+fi
 
 # ------------------------------------------------------------------ django
 log "Migrazioni, file statici e domande"
 cd "$DEPLOY_DIR"
-sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python manage.py migrate --noinput
+run_as_service .venv/bin/python manage.py migrate --noinput
 # le 9 pagine del livello 2 sono statiche (STATICFILES_DIRS include media/):
 # vanno generate PRIMA di collectstatic, altrimenti non vengono raccolte
-sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python scripts/genera_pagine_livello2.py
-sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python manage.py seed_questions --quiet
-sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python manage.py collectstatic --noinput --clear
+run_as_service .venv/bin/python scripts/genera_pagine_livello2.py
+run_as_service .venv/bin/python manage.py seed_questions --quiet
+run_as_service .venv/bin/python manage.py collectstatic --noinput --clear
 
 # ------------------------------------------------------------------ superuser
 log "Account amministratore Django (${ADMIN_USER})"
-if sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python manage.py shell -c \
+if run_as_service .venv/bin/python manage.py shell -c \
    "from django.contrib.auth import get_user_model; import sys; sys.exit(0 if get_user_model().objects.filter(username='${ADMIN_USER}').exists() else 1)"; then
   log "Utente ${ADMIN_USER} già presente"
 else
@@ -172,7 +240,7 @@ else
     warn "Password admin generata: ${ADMIN_PASSWORD}"
     warn "Annotala ora: non viene salvata in chiaro da nessuna parte."
   fi
-  sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) \
+  run_as_service \
     DJANGO_SUPERUSER_PASSWORD="$ADMIN_PASSWORD" \
     .venv/bin/python manage.py createsuperuser --noinput \
       --username "$ADMIN_USER" --email "$ADMIN_EMAIL"
