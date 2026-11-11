@@ -1,0 +1,83 @@
+name: Anteprima su GitHub Pages
+
+# Pubblica la webapp statica (root del repository) su GitHub Pages.
+# La versione Django in servers/django/ NON è pubblicabile su Pages:
+# richiede Python, database e un server applicativo.
+
+on:
+  push:
+    branches:
+      - main
+      - 'arena/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Prepara i file
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verifica che i file essenziali esistano
+        run: |
+          set -e
+          for file in index.html css/styles.css js/levels.js js/classifica.js js/game.js js/scuola.js \
+                      assets/logo-fassicomo.svg assets/favicon.svg manifest.webmanifest; do
+            if [ ! -f "$file" ]; then
+              echo "::error::File mancante: $file"
+              exit 1
+            fi
+          done
+          echo "Tutti i file essenziali sono presenti."
+
+      - name: Controllo sintattico JavaScript
+        run: |
+          set -e
+          for file in js/levels.js js/classifica.js js/game.js js/scuola.js server.js; do
+            node --check "$file"
+            echo "OK  $file"
+          done
+
+      - name: Esegue i test dell'app statica
+        run: npm test
+
+      - name: Prepara la cartella da pubblicare
+        run: |
+          mkdir -p _site
+          # solo i file necessari al gioco: niente server, test, docs o Django
+          cp -r index.html manifest.webmanifest css js assets data _site/
+          # impedisce a GitHub Pages di eseguire Jekyll (nessuna trasformazione)
+          touch _site/.nojekyll
+          echo "File pubblicati:"
+          find _site -type f | sort | sed 's/^/  /'
+          du -sh _site
+
+      - name: Configura Pages
+        uses: actions/configure-pages@v5
+
+      - name: Carica l'artefatto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Pubblica
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

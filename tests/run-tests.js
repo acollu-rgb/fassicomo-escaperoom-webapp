@@ -512,6 +512,47 @@ check('le opzioni delle domande a scelta multipla coincidono', () => {
   return true;
 });
 
+console.log('\nCompatibilità con GitHub Pages');
+check('index.html usa solo percorsi relativi', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(m => m[1]);
+  const absolute = refs.filter(r => r.startsWith('/') || r.includes('localhost') || r.includes('127.0.0.1'));
+  assert(absolute.length === 0, 'percorsi non relativi: ' + absolute.join(', '));
+  return true;
+});
+
+check('tutti gli asset referenziati esistono', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
+    .map(m => m[1])
+    .filter(r => !r.startsWith('#') && !r.startsWith('http'));
+  const missing = refs.filter(r => !fs.existsSync(path.join(ROOT, r)));
+  assert(missing.length === 0, 'file mancanti: ' + missing.join(', '));
+  return true;
+});
+
+check('la statica funziona senza API di file system (Firefox/Safari)', () => {
+  const safe = Object.assign({}, windowMock);
+  safe.isSecureContext = true;
+  safe.showOpenFilePicker = undefined;
+  safe.showSaveFilePicker = undefined;
+  safe.localStorage = localStorageMock;
+  safe.indexedDB = undefined;
+  safe.addEventListener = () => {};
+  safe.confirm = () => true;
+  safe.crypto = { randomUUID: () => 'x-' + Math.random() };
+  safe.window = safe;
+  safe.document = doc;
+  safe.setTimeout = (fn) => setTimeout(fn, 0);
+  safe.clearTimeout = clearTimeout;
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'js/levels.js'), 'utf8'), safe, { filename: 'levels.js' });
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'js/classifica.js'), 'utf8'), safe, { filename: 'classifica.js' });
+  assert(safe.Leaderboard, 'Leaderboard non esposta');
+  safe.Leaderboard.mount();
+  safe.Leaderboard.init();
+  return true;
+});
+
 console.log('\nClassifica e Admin');
 loadScript('js/classifica.js');
 const Leaderboard = windowMock.Leaderboard;
