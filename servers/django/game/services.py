@@ -287,7 +287,7 @@ def question_payload(assignment: SessionQuestion, session: GameSession) -> dict:
     if question.question_type == Question.Type.CODE_INSPECTION:
         payload["html_file"] = variant.html_file if variant else ""
         payload["inspect_url"] = (
-            f"{settings.MEDIA_URL}level2/{payload['html_file']}" if payload["html_file"] else ""
+            f"{settings.STATIC_URL}level2/{payload['html_file']}" if payload["html_file"] else ""
         )
     return payload
 

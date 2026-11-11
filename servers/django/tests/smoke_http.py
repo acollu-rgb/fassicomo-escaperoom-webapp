@@ -21,6 +21,7 @@ import secrets
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8002").rstrip("/")
 
@@ -130,7 +131,7 @@ def main():
     html = body.decode("utf-8", "replace")
     check("home contiene il modulo di avvio", lambda: "start-form" in html and "team-name" in html)
     check("home contiene le classifiche", lambda: "Migliori tempi" in html)
-    check("home contiene logo e CSS", lambda: "/static/img/logo-fassicomo.svg" in html and "/static/css/styles.css" in html)
+    check("home contiene logo e CSS", lambda: "/static/img/logo-fassicomo" in html and "/static/css/styles" in html)
     check("home espone il token CSRF", lambda: "csrftoken" in anonymous.jar and True or bool(anonymous.csrf()))
 
     for asset, label in [
@@ -138,7 +139,7 @@ def main():
         ("/static/js/play.js", "JS di gioco"),
         ("/static/js/scuola.js", "animazione scuola"),
         ("/static/img/logo-fassicomo.svg", "logo"),
-        ("/media/level2/livello_2_target_f.html", "pagina livello 2f"),
+        ("/static/level2/livello_2_target_f.html", "pagina livello 2f (statica)"),
     ]:
         status, body, _ = anonymous.get(asset)
         check(f"{label} servito ({asset})", lambda s=status: s == 200)
@@ -150,7 +151,7 @@ def main():
 
     # ---------------------------------------------------------- livello 2: token nel commento
     for letter, token in [("a", "ROOT"), ("f", "SICURO"), ("g", "NETA2026"), ("i", "PING")]:
-        status, body, _ = anonymous.get(f"/media/level2/livello_2_target_{letter}.html")
+        status, body, _ = anonymous.get(f"/static/level2/livello_2_target_{letter}.html")
         text = body.decode("utf-8", "replace")
         visible = text.split("<body>", 1)[1]
         visible = re.sub(r"<!--.*?-->", "", visible, flags=re.S)
@@ -158,6 +159,26 @@ def main():
             f"pagina 2{letter}: token nel commento e non visibile",
             lambda v=visible, t=token, x=text: (f"<!--" in x and t in x and t not in v),
         )
+
+    # ---------------------------------------------------------- url delle pagine livello 2
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from game.seed_data import QUESTIONS  # noqa: E402
+    status, payload = anonymous.post_json(
+        "/api/session/start/", {"team_name": RUN + "-url", "mode": "complete"}
+    )
+    url_session = payload.get("session", {}).get("id")
+    if url_session:
+        # porta la sessione al livello 2 rispondendo correttamente al livello 1
+        for _ in range(2):
+            status, payload = anonymous.get_json(f"/api/session/{url_session}/state/")
+            question = payload["session"]["question"]
+            if question["type"] == "code_inspection":
+                check("inspect_url punta agli statici", lambda q=question: q["inspect_url"].startswith("/static/level2/"))
+                check("pagina del livello 2 raggiungibile via inspect_url",
+                      lambda q=question: anonymous.get(q["inspect_url"])[0] == 200)
+                break
+            answers_map = {item["code"]: item["answer"] for item in QUESTIONS}
+            anonymous.post_json(f"/api/session/{url_session}/answer/", {"answer": answers_map[question["code"]]})
 
     # ---------------------------------------------------------- avvio partita rapida
     player = Client(BASE)
@@ -187,9 +208,6 @@ def main():
           lambda: payload["session"]["question"]["code"] != session["question"]["code"])
 
     # ---------------------------------------------------------- risposte corrette: serve la banca dati
-    sys.path.insert(0, ".")
-    from game.seed_data import QUESTIONS  # noqa: E402
-
     answers = {item["code"]: item["answer"] for item in QUESTIONS}
     choice_answers = {}
     for item in QUESTIONS:

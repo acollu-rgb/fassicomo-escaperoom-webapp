@@ -63,7 +63,7 @@ apt-get update -qq
 apt-get install -y -qq \
   python3 python3-venv python3-dev \
   postgresql postgresql-contrib libpq-dev \
-  nginx git curl build-essential
+  nginx git curl build-essential rsync
 
 # ------------------------------------------------------------------ utente
 log "Utente di sistema ${SERVICE_USER}"
@@ -145,9 +145,11 @@ sudo -u "$SERVICE_USER" "$DEPLOY_DIR/.venv/bin/pip" install --quiet -r "$DEPLOY_
 log "Migrazioni, file statici e domande"
 cd "$DEPLOY_DIR"
 sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python manage.py migrate --noinput
-sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python manage.py collectstatic --noinput --clear
-sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python manage.py seed_questions --quiet
+# le 9 pagine del livello 2 sono statiche (STATICFILES_DIRS include media/):
+# vanno generate PRIMA di collectstatic, altrimenti non vengono raccolte
 sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python scripts/genera_pagine_livello2.py
+sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python manage.py seed_questions --quiet
+sudo -u "$SERVICE_USER" env $(grep -v '^#' .env | xargs) .venv/bin/python manage.py collectstatic --noinput --clear
 
 # ------------------------------------------------------------------ superuser
 log "Account amministratore Django (${ADMIN_USER})"

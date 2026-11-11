@@ -168,7 +168,9 @@ USE_TZ = True
 
 STATIC_URL = env("STATIC_URL", "/static/")
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+# static/ (css, js, img) + media/ (le 9 pagine del livello 2), così collectstatic
+# le raccoglie e WhiteNoise le serve SEMPRE, anche senza Nginx davanti.
+STATICFILES_DIRS = [BASE_DIR / "static", BASE_DIR / "media"]
 
 # In test e sviluppo i nomi dei file statici non sono "hashati": evita di
 # dipendere dal manifest generato da collectstatic durante i test.
@@ -185,9 +187,13 @@ STORAGES = {
     },
 }
 
-# Pagine del livello 2: sono file HTML da ispezionare, serviti come media
+# Pagine del livello 2: file HTML da ispezionare.
+# Sono servite come STATICI (vedi STATICFILES_DIRS): WhiteNoise le serve da
+# /static/level2/... in ogni condizione. MEDIA resta configurato per
+# eventuali caricamenti futuri dall'Admin.
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+LEVEL2_URL = "/static/level2/"
 
 # ---------------------------------------------------------------- sessioni
 
@@ -196,6 +202,8 @@ SESSION_COOKIE_AGE = 60 * 60 * 8  # il cookie dura 8 ore
 
 # ---------------------------------------------------------------- log
 
+# Gli errori DisallowedHost sono la causa più comune di "non si apre" dopo
+# l'installazione: un log esplicito fa risparmiare mezz'ora di ricerche.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -208,6 +216,11 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": env("DJANGO_LOG_LEVEL", "INFO")},
     "loggers": {
         "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "django.security.DisallowedHost": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
         "game": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
