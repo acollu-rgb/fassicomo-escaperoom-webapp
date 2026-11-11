@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escape Room Cyber — Scuola Fassicomo</title>
+  <meta name="description" content="Escape room didattica sulla cybersicurezza per la Scuola Fassicomo: 5 o 8 livelli, classifiche dei migliori tempi e pannello tutor.">
+  <meta name="theme-color" content="#07030a">
+  <meta name="color-scheme" content="dark">
+
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <canvas id="matrixCanvas" aria-hidden="true"></canvas>
+  <canvas id="schoolCanvas" aria-hidden="true"></canvas>
+
+  <a class="skip-link" href="#game-body">Vai al gioco</a>
+
+  <main class="shell">
+    <header class="brand">
+      <div class="brand-logo">
+        <img src="assets/logo-fassicomo.svg" alt="Fondazione Fassicomo — Scuola Fassicomo" width="200" height="86">
+      </div>
+      <div class="brand-copy">
+        <p class="brand-kicker">Fondazione Fassicomo</p>
+        <h1>Escape Room Cyber</h1>
+        <p class="brand-sub">Laboratorio di cybersicurezza · versione 2.0.4</p>
+      </div>
+    </header>
+
+    <div class="controlbar" role="group" aria-label="Controlli audio e tempo">
+      <div class="control-group">
+        <button id="sounds-toggle" class="chip" type="button" aria-pressed="true">Suoni: ON</button>
+        <button id="music-toggle" class="chip" type="button" aria-pressed="true">Musica: ON</button>
+        <label class="volume">
+          <span>Volume</span>
+          <input id="music-volume" aria-label="Volume musica" type="range" min="0" max="0.5" step="0.01" value="0.16">
+        </label>
+      </div>
+      <div class="timer-wrap">
+        <span class="timer-label">Tempo</span>
+        <div class="timer-box" id="timer" role="timer" aria-live="off">--:--</div>
+      </div>
+    </div>
+
+    <section class="panel" aria-label="Area di gioco">
+      <div id="game-body"></div>
+    </section>
+
+    <section id="leaderboard-area" aria-label="Classifiche dei migliori tempi"></section>
+
+    <footer class="site-footer">
+      <div>Codice schermata tutor: <span class="screen-code" id="screen-code-display">--</span></div>
+      <div>Errori: <span id="errors-display">0</span></div>
+      <div>Giocatore: <span id="player-display">--</span></div>
+    </footer>
+  </main>
+
+  <!-- Scheda informativa / hint -->
+  <div id="hintModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="hintTitle">
+    <div class="modal-content">
+      <button class="close-modal" type="button" aria-label="Chiudi la scheda informativa" onclick="closeHint()">&times;</button>
+      <h3 id="hintTitle">Scheda informativa</h3>
+      <div id="hintText">Caricamento aiuti…</div>
+    </div>
+  </div>
+
+  <!-- Pannello Admin -->
+  <div id="admin-overlay" class="admin-overlay" hidden>
+    <section class="admin-panel" role="dialog" aria-modal="true" aria-labelledby="admin-title">
+      <div class="admin-head">
+        <h2 id="admin-title">Amministrazione</h2>
+        <button id="admin-close" type="button" class="chip" aria-label="Chiudi e blocca Admin">Chiudi &times;</button>
+      </div>
+
+      <form id="admin-login">
+        <p class="admin-intro">Password per gestire i file della classifica.</p>
+        <label for="admin-password">Password</label>
+        <input id="admin-password" name="password" type="password" autocomplete="off" required>
+        <button type="submit" class="btn btn-primary">Accedi</button>
+        <p id="admin-error" class="form-error" role="alert"></p>
+      </form>
+
+      <div id="admin-commands" hidden>
+        <div class="admin-buttons">
+          <button type="button" id="lb-connect" class="btn btn-ghost">Collega file esistente</button>
+          <button type="button" id="lb-create" class="btn btn-ghost">Crea file classifica</button>
+          <button type="button" id="lb-retry" class="btn btn-ghost">Riattiva / Salva</button>
+          <button type="button" id="lb-import" class="btn btn-ghost">Importa copia (manuale)</button>
+          <button type="button" id="lb-export" class="btn btn-ghost">Scarica backup</button>
+          <button type="button" id="lb-reset" class="btn btn-danger">Azzera classifica</button>
+        </div>
+        <p id="admin-status" class="admin-status" role="status"></p>
+        <p id="admin-detail" class="admin-detail"></p>
+        <p class="admin-note">Usa una sola scheda/postazione per file. Chiudere Admin non ferma il salvataggio automatico. La copia locale nel browser resta sempre attiva come riserva.</p>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast-area" class="toast-area" aria-live="polite" aria-atomic="false"></div>
+
+  <noscript>
+    <p class="noscript">Questa webapp richiede JavaScript abilitato per funzionare.</p>
+  </noscript>
+
+  <script src="js/levels.js" defer></script>
+  <script src="js/classifica.js" defer></script>
+  <script src="js/scuola.js" defer></script>
+  <script src="js/game.js" defer></script>
+</body>
+</html>

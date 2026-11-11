@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Escape Room Fassicomo">
+  <defs>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00ff41"/>
+      <stop offset="1" stop-color="#00992b"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#07030a"/>
+  <path d="M32 5 56 14v19c0 14-10 24-24 29C18 57 8 47 8 33V14Z" fill="#0b2413" stroke="url(#edge)" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="none" stroke="#00ff41" stroke-linecap="square" stroke-width="5">
+    <path d="M19 25 28 33 19 41"/>
+    <path d="M34 41h11"/>
+  </g>
+</svg>
