@@ -36,6 +36,33 @@ backup JSON dall'Admin.
 
 ---
 
+## Installazione sul server Ubuntu (comando unico)
+
+Un solo file, autosufficiente: scarica il progetto da GitHub e installa tutto.
+
+```bash
+curl -fsSL -o installa_escape_room.sh \
+  https://raw.githubusercontent.com/acollu-rgb/fassicomo-escaperoom-webapp/arena/99b72b86-fassicomo-escaperoom-webapp/installa_escape_room.sh
+
+sudo bash installa_escape_room.sh
+```
+
+Alla fine il gioco risponde su `http://IP-DELLA-MACCHINA:8002/`.
+
+**Dove metterlo:** in qualunque cartella, va bene la home (`~/`). Serve solo per
+lanciarlo: dopo l'installazione il progetto vive in `/srv/escaperoom/` e il
+file può anche essere cancellato.
+
+Opzioni utili:
+
+```bash
+sudo bash installa_escape_room.sh --ip 192.168.1.50          # IP fisso della macchina
+sudo bash installa_escape_room.sh --admin-password 'Scegli!2026'
+sudo bash installa_escape_room.sh --help
+```
+
+E' idempotente: rilanciarlo aggiorna il codice senza toccare database e partite.
+
 ## Anteprima online (GitHub Pages)
 
 La versione **statica** è pubblicata qui:
