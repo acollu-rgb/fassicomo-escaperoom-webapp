@@ -83,6 +83,10 @@ if [[ "$SRC_DIR" != "$DEPLOY_DIR" ]]; then
 fi
 mkdir -p "$DEPLOY_DIR"/{media/level2,staticfiles,backup,logs}
 
+# la copia avviene come root: senza questo chown il servizio (utente escaperoom)
+# non può creare .venv, scrivere i log né modificare i file
+chown -R "${SERVICE_USER}:www-data" "$DEPLOY_DIR"
+
 # ------------------------------------------------------------------ database
 log "Database PostgreSQL"
 DB_PASSWORD=""
@@ -135,6 +139,12 @@ chown "root:${SERVICE_USER}" "$ENV_FILE" 2>/dev/null || true
 
 # ------------------------------------------------------------------ venv
 log "Virtualenv e dipendenze Python"
+# un .venv creato da root (o interrotto a metà) impedirebbe l'installazione:
+# se il python del venv non è eseguibile lo ricreo da zero
+if [[ -d "$DEPLOY_DIR/.venv" && ! -x "$DEPLOY_DIR/.venv/bin/python" ]]; then
+  warn "$DEPLOY_DIR/.venv esiste ma è inutilizzabile: lo ricreo"
+  rm -rf "$DEPLOY_DIR/.venv"
+fi
 if [[ ! -x "$DEPLOY_DIR/.venv/bin/python" ]]; then
   sudo -u "$SERVICE_USER" "$PYTHON_BIN" -m venv "$DEPLOY_DIR/.venv"
 fi
@@ -172,6 +182,9 @@ fi
 chown -R "${SERVICE_USER}:www-data" "$DEPLOY_DIR"
 chmod -R g+rX "$DEPLOY_DIR/staticfiles"
 chmod 750 "$DEPLOY_DIR/media"
+# .env deve restare leggibile dal servizio ma non dal mondo
+chown "root:${SERVICE_USER}" "$DEPLOY_DIR/.env" 2>/dev/null || true
+chmod 640 "$DEPLOY_DIR/.env" 2>/dev/null || true
 
 # ------------------------------------------------------------------ systemd
 log "Servizio systemd ${APP_NAME}"
