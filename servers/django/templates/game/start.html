@@ -1,0 +1,88 @@
+{% extends "game/base.html" %}
+{% load static %}
+
+{% block title %}Escape Room Cyber — Scuola Fassicomo{% endblock %}
+{% block page_name %}start{% endblock %}
+
+{% block content %}
+<section class="panel" aria-labelledby="start-title">
+  <div class="start">
+    <div class="start-head">
+      <h2 id="start-title" class="section-title">Inserimento registro agenti</h2>
+      <p>Ogni squadra gioca la propria partita con il proprio timer. Inserisci il nome e scegli la modalità.</p>
+    </div>
+
+    <form id="start-form" novalidate>
+      <div class="field">
+        <label for="team-name">Nome squadra</label>
+        <input type="text" id="team-name" name="team_name" required autocomplete="off"
+               maxlength="{{ team_name_max_length }}" placeholder="Es. Cyber Ninja" enterkeyhint="go">
+        <p class="field-hint">Massimo {{ team_name_max_length }} caratteri. Il nome deve essere unico tra le partite in corso.</p>
+      </div>
+
+      <p class="field-label">Modalità di gioco</p>
+      <div class="mode-select-box" role="radiogroup" aria-label="Modalità di gioco">
+        {% for key, mode in modes.items %}
+          <button type="button" class="mode-card{% if forloop.first %} selected{% endif %}"
+                  id="mode-{{ key }}" role="radio"
+                  aria-checked="{% if forloop.first %}true{% else %}false{% endif %}"
+                  data-mode="{{ key }}">
+            <h3>{{ mode.label }}</h3>
+            <ul>
+              <li><strong>{{ mode.levels }} livelli</strong> da superare</li>
+              <li>Tempo totale: <strong>{{ mode.total_minutes }} minuti</strong></li>
+              <li>Penalità per errore: <strong>−{{ mode.penalty_label }}</strong></li>
+            </ul>
+          </button>
+        {% endfor %}
+      </div>
+
+      <input type="hidden" id="selected-mode" name="mode" value="rapid">
+      <button type="submit" class="btn btn-primary btn-block" id="start-button">Inizia missione</button>
+      <p id="start-error" class="feedback error" role="alert" hidden></p>
+    </form>
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="lb-title">
+  <h2 id="lb-title" class="section-title">Migliori tempi</h2>
+  <p class="section-sub">Tempo reale di completamento, al centesimo di secondo. Solo i migliori {{ leaderboard_size }} per modalità.</p>
+
+  <div class="lb-grid">
+    {% for key, entries in leaderboard.items %}
+      <div class="lb-card">
+        <h3>{% if key == 'rapid' %}Rapida{% else %}Completa{% endif %}
+          <span class="lb-tag">{% if key == 'rapid' %}5 livelli{% else %}8 livelli{% endif %}</span>
+        </h3>
+        <table>
+          <thead><tr><th scope="col">Pos.</th><th scope="col">Squadra</th><th scope="col">Tempo</th></tr></thead>
+          <tbody>
+            {% for entry in entries %}
+              <tr>
+                <td class="pos">{{ entry.position }}</td>
+                <td>{{ entry.team_name }}</td>
+                <td class="time">{{ entry.formatted }}</td>
+              </tr>
+            {% empty %}
+              {% for i in "123" %}
+                <tr><td class="pos">{{ forloop.counter }}</td><td class="empty" colspan="2">Nessun risultato</td></tr>
+              {% endfor %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.ESCAPEROOM = {
+    mode: "{{ mode_key|default:'rapid' }}",
+    startUrl: "{% url 'game:api_start' %}",
+    leaderboardUrl: "{% url 'game:api_leaderboard' %}"
+  };
+</script>
+<script src="{% static 'js/start.js' %}" defer></script>
+{% endblock %}

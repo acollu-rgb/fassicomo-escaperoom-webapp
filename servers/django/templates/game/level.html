@@ -1,0 +1,60 @@
+{% extends "game/base.html" %}
+{% load static game_tags %}
+
+{% block title %}Livello {{ session.current_level }} — {{ session.team_name }}{% endblock %}
+{% block page_name %}play{% endblock %}
+
+{% block content %}
+<div class="controlbar" role="group" aria-label="Controlli di gioco">
+  <div class="control-group">
+    <button id="sounds-toggle" class="chip" type="button" aria-pressed="true">Suoni: ON</button>
+    <button id="music-toggle" class="chip" type="button" aria-pressed="true">Musica: ON</button>
+    <label class="volume">
+      <span>Volume</span>
+      <input id="music-volume" aria-label="Volume musica" type="range" min="0" max="0.5" step="0.01" value="0.16">
+    </label>
+  </div>
+  <div class="controlbar-meta">
+    <span class="badge-team">{{ session.team_name }}</span>
+    <span class="badge-mode">{{ session.get_mode_display }} · {{ session.total_levels }} livelli</span>
+  </div>
+  <div class="timer-wrap">
+    <span class="timer-label">Tempo</span>
+    <div class="timer-box" id="timer" role="timer" aria-live="off">--:--</div>
+  </div>
+</div>
+
+<section class="panel" aria-live="polite">
+  <div id="game-body">
+    <p class="loading">Caricamento della missione…</p>
+  </div>
+</section>
+
+<div class="play-footer">
+  <span>Errori: <strong id="errors-display">0</strong></span>
+  <span>Codice schermata tutor: <span class="screen-code" id="screen-code-display">--</span></span>
+  <span>Partita: <code>{{ session.id }}</code></span>
+</div>
+
+<div id="hintModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="hintTitle">
+  <div class="modal-content">
+    <button class="close-modal" type="button" aria-label="Chiudi la scheda informativa" data-close-hint>&times;</button>
+    <h3 id="hintTitle">Scheda informativa</h3>
+    <div id="hintText">Caricamento aiuti…</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script id="initial-state" type="application/json">{{ state|safe }}</script>
+<script>
+  window.ESCAPEROOM = {
+    sessionId: "{{ session.id }}",
+    stateUrl: "{% url 'game:api_state' session.id %}",
+    answerUrl: "{% url 'game:api_answer' session.id %}",
+    resultUrl: "{% url 'game:result' session.id %}",
+    playUrl: "{% url 'game:play' session.id %}"
+  };
+</script>
+<script src="{% static 'js/play.js' %}" defer></script>
+{% endblock %}

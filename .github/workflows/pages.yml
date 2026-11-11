@@ -1,0 +1,128 @@
+name: Verifica e anteprima
+
+# Due scopi:
+#  1. controllare (sintassi + test) a ogni push — sempre attivo
+#  2. aggiornare GitHub Pages, ma solo se Pages è stato attivato
+#
+# Il branch `gh-pages` contiene già una build pronta della webapp statica.
+# Se attivi Pages scegliendo "Deploy from a branch → gh-pages", l'anteprima
+# funziona subito. Se invece preferisci "GitHub Actions", questo workflow
+# la ricostruisce e la pubblica a ogni push.
+
+on:
+  push:
+    branches:
+      - main
+      - 'arena/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  verifica:
+    name: Controlli e test
+    runs-on: ubuntu-latest
+    outputs:
+      usa_workflow: ${{ steps.check.outputs.workflow }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: File essenziali presenti
+        run: |
+          set -e
+          for file in index.html css/styles.css js/levels.js js/classifica.js \
+                      js/game.js js/scuola.js assets/logo-fassicomo.svg \
+                      assets/favicon.svg manifest.webmanifest; do
+            if [ ! -f "$file" ]; then
+              echo "::error::File mancante: $file"
+              exit 1
+            fi
+          done
+          echo "Tutti i file essenziali sono presenti."
+
+      - name: Controllo sintattico JavaScript
+        run: |
+          set -e
+          for file in js/levels.js js/classifica.js js/game.js js/scuola.js server.js; do
+            node --check "$file"
+            echo "OK  $file"
+          done
+
+      - name: Test dell'app statica
+        run: npm test
+
+      - name: Controlla la modalità di GitHub Pages
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          json=$(gh api "repos/${{ github.repository }}/pages" 2>/dev/null)
+          if [ -z "$json" ]; then
+            echo "workflow=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages non è attivo. La build è pronta sul branch gh-pages."
+            exit 0
+          fi
+          tipo=$(echo "$json" | jq -r '.build_type')
+          echo "GitHub Pages attivo. Modalità: $tipo"
+          if [ "$tipo" = "workflow" ]; then
+            echo "workflow=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "workflow=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Pages pubblica dal branch gh-pages (modalità legacy): il deploy automatico da Actions non serve."
+          fi
+
+  build:
+    name: Prepara la build
+    needs: verifica
+    # solo in modalità "GitHub Actions"; con la modalità legacy Pages
+    # pubblica da sé il contenuto del branch gh-pages
+    if: needs.verifica.outputs.usa_workflow == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepara la cartella da pubblicare
+        run: |
+          set -e
+          mkdir -p _site
+          # solo i file del gioco: niente server, test, docs o progetto Django
+          cp -r index.html manifest.webmanifest css js assets data _site/
+          touch _site/.nojekyll
+          echo "File pubblicati:"
+          find _site -type f | sort | sed 's/^/  /'
+          du -sh _site
+
+      - name: Configura Pages
+        uses: actions/configure-pages@v5
+
+      - name: Carica l'artefatto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Pubblica
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

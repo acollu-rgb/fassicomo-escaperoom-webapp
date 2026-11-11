@@ -1,0 +1,20 @@
+{
+  "name": "Escape Room Cyber — Scuola Fassicomo",
+  "short_name": "Escape Fassicomo",
+  "description": "Escape room didattica sulla cybersicurezza: 5 o 8 livelli, classifiche dei migliori tempi e pannello tutor.",
+  "lang": "it",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07030a",
+  "theme_color": "#07030a",
+  "icons": [
+    {
+      "src": "assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

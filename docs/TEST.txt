@@ -1,0 +1,9 @@
+Controllo sintattico superato: levels.js, classifica.js, scuola.js, game.js, server.js.
+Test con DOM, canvas, localStorage, IndexedDB e File System API simulati (non browser reale).
+
+  · app statica (npm test) .................. 72 test superati
+  · Django unit (manage.py test game) ........ 39 test superati
+  · Django smoke HTTP (tests/smoke_http.py) .. 45 verifiche superate
+
+Dettaglio completo e aggiornato: tests/risultati.json
+Progetto Django: servers/django/README.md

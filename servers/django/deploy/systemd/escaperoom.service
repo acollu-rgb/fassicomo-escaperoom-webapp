@@ -1,0 +1,38 @@
+[Unit]
+Description=Escape Room Fassicomo (Django + Gunicorn)
+Documentation=file:///srv/escaperoom/README.md
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=escaperoom
+Group=www-data
+WorkingDirectory=/srv/escaperoom
+EnvironmentFile=/srv/escaperoom/.env
+Environment="DJANGO_SETTINGS_MODULE=escaperoom.settings"
+Environment="PYTHONUNBUFFERED=1"
+
+# Gunicorn in ascolto solo su loopback (8003): Nginx fa da proxy sulla 8002
+ExecStart=/srv/escaperoom/.venv/bin/gunicorn escaperoom.wsgi:application \
+    --bind 127.0.0.1:8003 \
+    --workers 3 \
+    --threads 2 \
+    --timeout 60 \
+    --graceful-timeout 20 \
+    --access-logfile /srv/escaperoom/logs/gunicorn-access.log \
+    --error-logfile /srv/escaperoom/logs/gunicorn-error.log \
+    --capture-output
+
+Restart=always
+RestartSec=3
+
+# Isolamento di base
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/escaperoom/media /srv/escaperoom/logs /srv/escaperoom/staticfiles
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,22 @@
+{
+  "name": "fassicomo-escaperoom-webapp",
+  "version": "2.0.4",
+  "private": true,
+  "description": "Escape Room Cyber — webapp didattica sulla cybersicurezza per la Scuola Fassicomo",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node tests/run-tests.js"
+  },
+  "keywords": [
+    "escape-room",
+    "cybersecurity",
+    "scuola",
+    "fassicomo",
+    "didattica"
+  ],
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  }
+}
